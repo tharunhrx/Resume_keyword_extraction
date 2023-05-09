@@ -1,0 +1,73 @@
+import os
+import subprocess
+import pandas as pd
+import re
+import textract
+
+# Define keywords related to credit, policy, rating, and collection
+credit_keywords = ["credit analysis", "credit risk", "debt collection"]
+policy_keywords = ["policy development", "policy formulation"]
+rating_keywords = ["credit rating"]
+collection_keywords = ["debt collection"]
+
+# Function to extract information from resume
+def extract_information(resume_file):
+    # Load resume text
+    if resume_file.endswith('.pdf'):
+        resume_text = pdf_to_text(resume_file)
+    elif resume_file.endswith('.docx'):
+        resume_text = docx_to_text(resume_file)
+    else:
+        raise ValueError("Unsupported file format. Only .pdf and .docx files are supported.")
+    
+    # Extract keyword matches
+    collection = 'y' if any(re.search(rf'(?i)\b{k}\b', resume_text) for k in collection_keywords) else 'n'
+    credit = 'y' if any(re.search(rf'(?i)\b{k}\b', resume_text) for k in credit_keywords) else 'n'
+    rating = 'y' if any(re.search(rf'(?i)\b{k}\b', resume_text) for k in rating_keywords) else 'n'
+    policy = 'y' if any(re.search(rf'(?i)\b{k}\b', resume_text) for k in policy_keywords) else 'n'
+
+    return collection, credit, rating, policy
+
+
+# Function to convert PDF to text
+def pdf_to_text(file_path):
+    text = textract.process(file_path).decode('utf-8')
+    return text
+
+
+# Function to convert DOCX to text
+def docx_to_text(file_path):
+    text = textract.process(file_path).decode('utf-8')
+    return text
+
+
+# Folder containing resume files
+folder_path = r"D:\Resume"
+
+# Initialize empty results list
+results = []
+
+# Loop through all files in the folder
+for file in os.listdir(folder_path):
+    file_path = os.path.join(folder_path, file)
+    if os.path.isfile(file_path):
+        print("File: ", file)
+        try:
+            collection, credit, rating, policy = extract_information(file_path)
+            print("Collection experience: ", collection)
+            print("Credit experience: ", credit)
+            print("Rating experience: ", rating)
+            print("Policy experience: ", policy)
+            results.append([file, collection, credit, rating, policy])
+        except ValueError as e:
+            print(str(e))
+            continue
+
+# Create pandas DataFrame from results list
+df = pd.DataFrame(results, columns=['File', 'Collection Experience', 'Credit Experience', 'Rating Experience', 'Policy Experience'])
+# Write results to Excel file
+output_file = 'resume_data.xlsx'
+df.to_excel(output_file, index=False)
+
+# Open Excel file with default program
+subprocess.run(['start', '', output_file], check=True, shell=True)
